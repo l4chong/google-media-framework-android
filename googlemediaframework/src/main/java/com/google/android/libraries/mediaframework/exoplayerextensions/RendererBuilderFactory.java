@@ -19,6 +19,8 @@ package com.google.android.libraries.mediaframework.exoplayerextensions;
 import android.content.Context;
 import android.net.Uri;
 
+import com.google.android.exoplayer.extractor.mp4.Mp4Extractor;
+
 /**
  * Generate a renderer builder appropriate for rendering a video.
  */
@@ -33,18 +35,19 @@ public class RendererBuilderFactory {
                                                                        Video video) {
     switch (video.getVideoType()) {
       case HLS:
-        return new HlsRendererBuilder(ExoplayerUtil.getUserAgent(ctx),
+        return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
                                       video.getUrl(),
                                       video.getContentId());
-      case DASH:
-        return new DashRendererBuilder(ExoplayerUtil.getUserAgent(ctx),
-                                       video.getUrl(),
-                                       video.getContentId(),
-                                       new WidevineTestMediaDrmCallback(video.getContentId()),
-                                       null); // TODO: Pass in DebugTextView here.
+//      case DASH:
+//        return new DashRendererBuilder(ExoplayerUtil.getUserAgent(ctx),
+//                                       video.getUrl(),
+//                                       video.getContentId(),
+//                                       new WidevineTestMediaDrmCallback(video.getContentId()),
+//                                       null); // TODO: Pass in DebugTextView here.
       case MP4:
         // TODO: DebugTextView.
-        return new DefaultRendererBuilder(ctx, Uri.parse(video.getUrl()), null);
+        return new ExtractorRendererBuilder(ExoplayerUtil.getUserAgent(ctx), Uri.parse(video.getUrl()),
+                        null, new Mp4Extractor());
       default:
         return null;
     }

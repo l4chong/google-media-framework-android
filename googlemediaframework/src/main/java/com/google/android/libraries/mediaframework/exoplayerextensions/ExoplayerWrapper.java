@@ -34,6 +34,7 @@ import com.google.android.exoplayer.MediaCodecVideoTrackRenderer;
 import com.google.android.exoplayer.TrackRenderer;
 import com.google.android.exoplayer.audio.AudioTrack;
 import com.google.android.exoplayer.chunk.ChunkSampleSource;
+import com.google.android.exoplayer.chunk.Format;
 import com.google.android.exoplayer.chunk.MultiTrackChunkSource;
 import com.google.android.exoplayer.drm.StreamingDrmSessionManager;
 import com.google.android.exoplayer.metadata.MetadataTrackRenderer;
@@ -751,46 +752,87 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
     }
   }
 
-  @Override
-  public void onLoadStarted(int sourceId,
-                            String formatId,
-                            int trigger,
-                            boolean isInitialization,
-                            int mediaStartTimeMs,
-                            int mediaEndTimeMs,
-                            long totalBytes) {
-    if (infoListener != null) {
-      infoListener.onLoadStarted(sourceId, formatId, trigger, isInitialization, mediaStartTimeMs,
-          mediaEndTimeMs, totalBytes);
-    }
-  }
+//  @Override
+//  public void onLoadStarted(int sourceId,
+//                            String formatId,
+//                            int trigger,
+//                            boolean isInitialization,
+//                            int mediaStartTimeMs,
+//                            int mediaEndTimeMs,
+//                            long totalBytes) {
+//    if (infoListener != null) {
+//      infoListener.onLoadStarted(sourceId, formatId, trigger, isInitialization, mediaStartTimeMs,
+//          mediaEndTimeMs, totalBytes);
+//    }
+//  }
 
-  @Override
-  public void onLoadCompleted(int sourceId, long bytesLoaded) {
-    if (infoListener != null) {
-      infoListener.onLoadCompleted(sourceId, bytesLoaded);
-    }
-  }
+//  @Override
+//  public void onLoadCompleted(int sourceId, long bytesLoaded) {
+//    if (infoListener != null) {
+//      infoListener.onLoadCompleted(sourceId, bytesLoaded);
+//    }
+//  }
 
-  @Override
+    @Override
+    public void onLoadStarted(int sourceId, long length, int type, int trigger, Format format,
+                                  int mediaStartTimeMs, int mediaEndTimeMs) {
+
+        if (infoListener != null) {
+            //assumed isInitialized = true
+            infoListener.onLoadStarted(sourceId, format.id, trigger, true, mediaStartTimeMs,
+                    mediaEndTimeMs, length);
+        }
+    }
+
+    @Override
+    public void onLoadCompleted(int sourceId, long bytesLoaded, int type, int trigger, Format format,
+                                int mediaStartTimeMs, int mediaEndTimeMs, long elapsedRealtimeMs, long loadDurationMs) {
+        if (infoListener != null) {
+            infoListener.onLoadCompleted(sourceId, bytesLoaded);
+        }
+    }
+
+    @Override
   public void onLoadCanceled(int sourceId, long bytesLoaded) {
     // Do nothing.
   }
 
-  @Override
-  public void onDownstreamFormatChanged(int sourceId,
-                                        String formatId,
-                                        int trigger,
-                                        int mediaTimeMs) {
-    if (infoListener == null) {
-      return;
+    @Override
+    public void onLoadError(int i, IOException e) {
+
     }
-    if (sourceId == TYPE_VIDEO) {
-      infoListener.onVideoFormatEnabled(formatId, trigger, mediaTimeMs);
-    } else if (sourceId == TYPE_AUDIO) {
-      infoListener.onAudioFormatEnabled(formatId, trigger, mediaTimeMs);
+
+    @Override
+    public void onUpstreamDiscarded(int i, int i2, int i3) {
+
     }
-  }
+
+    @Override
+    public void onDownstreamFormatChanged(int sourceId, Format format, int trigger, int mediaTimeMs) {
+        if (infoListener == null) {
+            return;
+        }
+        if (sourceId == TYPE_VIDEO) {
+            infoListener.onVideoFormatEnabled(format.id, trigger, mediaTimeMs);
+        } else if (sourceId == TYPE_AUDIO) {
+            infoListener.onAudioFormatEnabled(format.id, trigger, mediaTimeMs);
+        }
+    }
+
+//    @Override
+//  public void onDownstreamFormatChanged(int sourceId,
+//                                        String formatId,
+//                                        int trigger,
+//                                        int mediaTimeMs) {
+//    if (infoListener == null) {
+//      return;
+//    }
+//    if (sourceId == TYPE_VIDEO) {
+//      infoListener.onVideoFormatEnabled(formatId, trigger, mediaTimeMs);
+//    } else if (sourceId == TYPE_AUDIO) {
+//      infoListener.onAudioFormatEnabled(formatId, trigger, mediaTimeMs);
+//    }
+//  }
 
   @Override
   public void onDrmSessionManagerError(Exception e) {
@@ -827,19 +869,24 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
     }
   }
 
-  @Override
-  public void onUpstreamError(int sourceId, IOException e) {
-    if (internalErrorListener != null) {
-      internalErrorListener.onUpstreamError(sourceId, e);
-    }
-  }
+    @Override
+    public void onDecoderInitialized(String s, long l, long l2) {
 
-  @Override
-  public void onConsumptionError(int sourceId, IOException e) {
-    if (internalErrorListener != null) {
-      internalErrorListener.onConsumptionError(sourceId, e);
     }
-  }
+
+//    @Override
+//  public void onUpstreamError(int sourceId, IOException e) {
+//    if (internalErrorListener != null) {
+//      internalErrorListener.onUpstreamError(sourceId, e);
+//    }
+//  }
+
+//  @Override
+//  public void onConsumptionError(int sourceId, IOException e) {
+//    if (internalErrorListener != null) {
+//      internalErrorListener.onConsumptionError(sourceId, e);
+//    }
+//  }
 
   @Override
   public void onText(String text) {
@@ -870,17 +917,17 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
     // Do nothing.
   }
 
-  @Override
-  public void onUpstreamDiscarded(int sourceId, int mediaStartTimeMs, int mediaEndTimeMs,
-      long totalBytes) {
-    // Do nothing.
-  }
+//  @Override
+//  public void onUpstreamDiscarded(int sourceId, int mediaStartTimeMs, int mediaEndTimeMs,
+//      long totalBytes) {
+//    // Do nothing.
+//  }
 
-  @Override
-  public void onDownstreamDiscarded(int sourceId, int mediaStartTimeMs, int mediaEndTimeMs,
-      long totalBytes) {
-    // Do nothing.
-  }
+//  @Override
+//  public void onDownstreamDiscarded(int sourceId, int mediaStartTimeMs, int mediaEndTimeMs,
+//      long totalBytes) {
+//    // Do nothing.
+//  }
 
   /**
    * If either playback state or the play when ready values have changed, notify all the playback
