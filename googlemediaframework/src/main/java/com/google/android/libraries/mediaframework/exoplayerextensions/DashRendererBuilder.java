@@ -21,6 +21,7 @@
 //package com.google.android.libraries.mediaframework.exoplayerextensions;
 //
 //import android.annotation.TargetApi;
+//import android.content.Context;
 //import android.media.MediaCodec;
 //import android.media.UnsupportedSchemeException;
 //import android.os.Handler;
@@ -53,9 +54,10 @@
 //import com.google.android.exoplayer.text.TextTrackRenderer;
 //import com.google.android.exoplayer.text.ttml.TtmlParser;
 //import com.google.android.exoplayer.text.webvtt.WebvttParser;
-//import com.google.android.exoplayer.upstream.BufferPool;
 //import com.google.android.exoplayer.upstream.DataSource;
+//import com.google.android.exoplayer.upstream.DefaultAllocator;
 //import com.google.android.exoplayer.upstream.DefaultBandwidthMeter;
+//import com.google.android.exoplayer.upstream.DefaultUriDataSource;
 //import com.google.android.exoplayer.upstream.UriDataSource;
 //import com.google.android.exoplayer.util.ManifestFetcher;
 //import com.google.android.exoplayer.util.ManifestFetcher.ManifestCallback;
@@ -92,13 +94,17 @@
 //  private final String contentId;
 //  private final MediaDrmCallback drmCallback;
 //  private final TextView debugTextView;
+//  private final Context mContext;
 //
 //  private ExoplayerWrapper player;
 //  private RendererBuilderCallback callback;
 //  private ManifestFetcher<MediaPresentationDescription> manifestFetcher;
+//  private UriDataSource manifestDataSource;
+//  private long elapsedRealtimeOffset;
 //
-//  public DashRendererBuilder(String userAgent, String url, String contentId,
+//  public DashRendererBuilder(Context ctx,String userAgent, String url, String contentId,
 //                             MediaDrmCallback drmCallback, TextView debugTextView) {
+//    this.mContext = ctx;
 //    this.userAgent = userAgent;
 //    this.url = url;
 //    this.contentId = contentId;
@@ -111,21 +117,20 @@
 //    this.player = player;
 //    this.callback = callback;
 //    MediaPresentationDescriptionParser parser = new MediaPresentationDescriptionParser();
-//    manifestFetcher = new ManifestFetcher<MediaPresentationDescription>(parser, contentId, url,
-//        userAgent);
+//    manifestFetcher = new ManifestFetcher<MediaPresentationDescription>(url, manifestDataSource, parser);
 //    manifestFetcher.singleLoad(player.getMainHandler().getLooper(), this);
 //  }
 //
 //  @Override
-//  public void onManifestError(String contentId, IOException e) {
+//  public void onSingleManifestError(IOException e) {
 //    callback.onRenderersError(e);
 //  }
 //
 //  @Override
-//  public void onManifest(String contentId, MediaPresentationDescription manifest) {
+//  public void onSingleManifest(MediaPresentationDescription manifest) {
 //    Period period = manifest.periods.get(0);
 //    Handler mainHandler = player.getMainHandler();
-//    LoadControl loadControl = new DefaultLoadControl(new BufferPool(BUFFER_SEGMENT_SIZE));
+//    LoadControl loadControl = new DefaultLoadControl(new DefaultAllocator(BUFFER_SEGMENT_SIZE));
 //    DefaultBandwidthMeter bandwidthMeter = new DefaultBandwidthMeter(mainHandler, player);
 //
 //    boolean hasContentProtection = false;
@@ -204,17 +209,21 @@
 //      debugRenderer = null;
 //    } else {
 //      int[] videoRepresentationIndices = Util.toArray(videoRepresentationIndexList);
-//      DataSource videoDataSource = new UriDataSource(userAgent, bandwidthMeter);
+//        DataSource videoDataSource = new DefaultUriDataSource(mContext, bandwidthMeter, userAgent);
 //      ChunkSource videoChunkSource = new DashChunkSource(manifestFetcher, videoAdaptationSetIndex,
 //          videoRepresentationIndices, videoDataSource, new AdaptiveEvaluator(bandwidthMeter),
 //          LIVE_EDGE_LATENCY_MS);
+//
+//        ChunkSource videoChunkSource = new DashChunkSource(manifestFetcher,
+//                videoAdaptationSetIndex, videoRepresentationIndices, videoDataSource,
+//                new AdaptiveEvaluator(bandwidthMeter), LIVE_EDGE_LATENCY_MS, elapsedRealtimeOffset);
 //      ChunkSampleSource videoSampleSource = new ChunkSampleSource(videoChunkSource, loadControl,
 //          VIDEO_BUFFER_SEGMENTS * BUFFER_SEGMENT_SIZE, true, mainHandler, player,
 //          ExoplayerWrapper.TYPE_VIDEO);
 //      videoRenderer = new MediaCodecVideoTrackRenderer(videoSampleSource, drmSessionManager, true,
 //          MediaCodec.VIDEO_SCALING_MODE_SCALE_TO_FIT, 5000, null, mainHandler, player, 50);
-//      debugRenderer = debugTextView != null
-//          ? new DebugTrackRenderer(debugTextView, videoRenderer, videoSampleSource) : null;
+////      debugRenderer = debugTextView != null
+////          ? new DebugTrackRenderer(debugTextView, videoRenderer, videoSampleSource) : null;
 //    }
 //
 //    // Build the audio chunk sources.
@@ -319,7 +328,8 @@
 //    callback.onRenderers(trackNames, multiTrackChunkSources, renderers);
 //  }
 //
-//  @TargetApi(18)
+//
+//    @TargetApi(18)
 //  private static class V18Compat {
 //
 //    public static Pair<DrmSessionManager, Boolean> getDrmSessionManagerData(ExoplayerWrapper player,
