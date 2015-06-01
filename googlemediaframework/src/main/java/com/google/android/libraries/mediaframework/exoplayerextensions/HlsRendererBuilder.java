@@ -76,7 +76,7 @@ public class HlsRendererBuilder implements RendererBuilder, ManifestCallback<Hls
     this.callback = callback;
     HlsPlaylistParser parser = new HlsPlaylistParser();
     ManifestFetcher<HlsPlaylist> playlistFetcher =
-              new ManifestFetcher<HlsPlaylist>(url, new DefaultUriDataSource(userAgent, null), parser);
+              new ManifestFetcher<HlsPlaylist>(url, new DefaultUriDataSource(mContext, null, userAgent), parser);
     playlistFetcher.singleLoad(player.getMainHandler().getLooper(), this);
   }
 
@@ -131,7 +131,7 @@ public class HlsRendererBuilder implements RendererBuilder, ManifestCallback<Hls
             }
         }
 
-        DataSource dataSource = new DefaultUriDataSource(userAgent, bandwidthMeter);
+        DataSource dataSource = new DefaultUriDataSource(mContext, bandwidthMeter, userAgent);
         HlsChunkSource chunkSource = new HlsChunkSource(dataSource, url, manifest, bandwidthMeter,
                 variantIndices, HlsChunkSource.ADAPTIVE_MODE_SPLICE, null);
         HlsSampleSource sampleSource = new HlsSampleSource(chunkSource, true, 3, REQUESTED_BUFFER_SIZE,

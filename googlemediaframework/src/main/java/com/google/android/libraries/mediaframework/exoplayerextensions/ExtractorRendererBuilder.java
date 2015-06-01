@@ -15,6 +15,7 @@
  */
 package com.google.android.libraries.mediaframework.exoplayerextensions;
 
+import android.content.Context;
 import android.media.MediaCodec;
 import android.net.Uri;
 import android.widget.TextView;
@@ -43,9 +44,11 @@ public class ExtractorRendererBuilder implements RendererBuilder {
   private final Uri uri;
   private final TextView debugTextView;
   private final Extractor extractor;
+  private final Context mContext;
 
   public ExtractorRendererBuilder(String userAgent, Uri uri, TextView debugTextView,
-      Extractor extractor) {
+      Extractor extractor, Context context) {
+    this.mContext = context;
     this.userAgent = userAgent;
     this.uri = uri;
     this.debugTextView = debugTextView;
@@ -55,7 +58,7 @@ public class ExtractorRendererBuilder implements RendererBuilder {
   @Override
   public void buildRenderers(ExoplayerWrapper player, RendererBuilderCallback callback) {
     // Build the video and audio renderers.
-    DataSource dataSource = new DefaultUriDataSource(userAgent, null);
+    DataSource dataSource = new DefaultUriDataSource(mContext, userAgent);
     ExtractorSampleSource sampleSource = new ExtractorSampleSource(uri, dataSource, extractor, 2,
         BUFFER_SIZE);
     MediaCodecVideoTrackRenderer videoRenderer = new MediaCodecVideoTrackRenderer(sampleSource,

@@ -19,6 +19,7 @@ package com.google.android.libraries.mediaframework.exoplayerextensions;
 import android.content.Context;
 import android.net.Uri;
 
+import com.google.android.exoplayer.extractor.mp3.Mp3Extractor;
 import com.google.android.exoplayer.extractor.mp4.Mp4Extractor;
 
 /**
@@ -48,7 +49,11 @@ public class RendererBuilderFactory {
       case MP4:
         // TODO: DebugTextView.
         return new ExtractorRendererBuilder(ExoplayerUtil.getUserAgent(ctx), Uri.parse(video.getUrl()),
-                        null, new Mp4Extractor());
+                        null, new Mp4Extractor(), ctx);
+    case MP3:
+        // TODO: DebugTextView.
+        return new ExtractorRendererBuilder(ExoplayerUtil.getUserAgent(ctx), Uri.parse(video.getUrl()),
+                null, new Mp3Extractor(), ctx);
       default:
         return null;
     }
