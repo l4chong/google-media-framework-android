@@ -58,7 +58,7 @@ public class ExtractorRendererBuilder implements RendererBuilder {
   @Override
   public void buildRenderers(ExoplayerWrapper player, RendererBuilderCallback callback) {
     // Build the video and audio renderers.
-    DataSource dataSource = new DefaultUriDataSource(mContext, userAgent);
+    DataSource dataSource = new DefaultUriDataSource(userAgent, null);
     ExtractorSampleSource sampleSource = new ExtractorSampleSource(uri, dataSource, extractor, 2,
         BUFFER_SIZE);
     MediaCodecVideoTrackRenderer videoRenderer = new MediaCodecVideoTrackRenderer(sampleSource,
