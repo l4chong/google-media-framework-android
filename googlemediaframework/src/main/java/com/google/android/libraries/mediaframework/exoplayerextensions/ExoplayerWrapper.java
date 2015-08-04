@@ -25,10 +25,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.view.Surface;
 
+import com.google.android.exoplayer.CodecCounters;
 import com.google.android.exoplayer.DummyTrackRenderer;
 import com.google.android.exoplayer.ExoPlaybackException;
 import com.google.android.exoplayer.ExoPlayer;
 import com.google.android.exoplayer.MediaCodecAudioTrackRenderer;
+import com.google.android.exoplayer.MediaCodecTrackRenderer;
 import com.google.android.exoplayer.MediaCodecTrackRenderer.DecoderInitializationException;
 import com.google.android.exoplayer.MediaCodecVideoTrackRenderer;
 import com.google.android.exoplayer.TrackRenderer;
@@ -37,11 +39,16 @@ import com.google.android.exoplayer.chunk.ChunkSampleSource;
 import com.google.android.exoplayer.chunk.Format;
 import com.google.android.exoplayer.chunk.MultiTrackChunkSource;
 import com.google.android.exoplayer.drm.StreamingDrmSessionManager;
+import com.google.android.exoplayer.hls.HlsSampleSource;
 import com.google.android.exoplayer.metadata.MetadataTrackRenderer;
+import com.google.android.exoplayer.text.Cue;
 import com.google.android.exoplayer.text.TextRenderer;
+import com.google.android.exoplayer.upstream.BandwidthMeter;
 import com.google.android.exoplayer.upstream.DefaultBandwidthMeter;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -51,11 +58,41 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * SmoothStreaming and so on).
  */
 public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.EventListener,
-    DefaultBandwidthMeter.EventListener, MediaCodecVideoTrackRenderer.EventListener,
-    MediaCodecAudioTrackRenderer.EventListener, TextRenderer,
+    DefaultBandwidthMeter.EventListener, MediaCodecVideoTrackRenderer.EventListener, HlsSampleSource.EventListener,
+    MediaCodecAudioTrackRenderer.EventListener, TextRenderer, MetadataTrackRenderer.MetadataRenderer<Map<String, Object>>,
     StreamingDrmSessionManager.EventListener {
 
-  /**
+
+    private BandwidthMeter bandwidthMeter;
+    private CodecCounters codecCounters;
+
+    @Override
+    public void onMetadata(Map<String, Object> metadata) {
+        if (id3MetadataListener != null && selectedTracks[TYPE_TIMED_METADATA] != DISABLED_TRACK) {
+            id3MetadataListener.onId3Metadata(metadata);
+        }
+    }
+
+    /**
+     * A listener for receiving notifications of timed text.
+     */
+    public interface CaptionListener {
+        void onCues(List<Cue> cues);
+    }
+    private CaptionListener captionListener;
+
+    @Override
+    public void onCues(List<Cue> list) {
+        if (captionListener != null && selectedTracks[TYPE_TEXT] != DISABLED_TRACK) {
+            captionListener.onCues(list);
+        }
+    }
+
+
+    public void setCaptionListener(CaptionListener listener) {
+        captionListener = listener;
+    }
+    /**
    * Builds renderers for the player.
    */
   public interface RendererBuilder {
@@ -88,7 +125,7 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
      *                  corresponding type.
      */
     void onRenderers(String[][] trackNames, MultiTrackChunkSource[] multiTrackSources,
-                          TrackRenderer[] renderers);
+                     TrackRenderer[] renderers, BandwidthMeter bandwidthMeter);
     /**
      * Invoked if a {@link RendererBuilder} encounters an error.
      *
@@ -546,6 +583,10 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
     } else {
       pushTrackSelection(type, true);
     }
+
+      if (type == TYPE_TEXT && state == DISABLED_TRACK && captionListener != null) {
+          captionListener.onCues(Collections.<Cue>emptyList());
+      }
   }
 
   /**
@@ -580,7 +621,8 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
    *                  corresponding type.
    */
   public void onRenderers(String[][] trackNames,
-      MultiTrackChunkSource[] multiTrackSources, TrackRenderer[] renderers) {
+                          MultiTrackChunkSource[] multiTrackSources, TrackRenderer[] renderers,
+                          BandwidthMeter bandwidthMeter) {
     builderCallback = null;
     // Normalize the results.
     if (trackNames == null) {
@@ -601,15 +643,33 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
       }
     }
     // Complete preparation.
-    this.videoRenderer = renderers[TYPE_VIDEO];
-    this.trackNames = trackNames;
-    this.multiTrackSources = multiTrackSources;
-    rendererBuildingState = RENDERER_BUILDING_STATE_BUILT;
-    maybeReportPlayerState();
-    pushSurfaceAndVideoTrack(false);
-    pushTrackSelection(TYPE_AUDIO, true);
-    pushTrackSelection(TYPE_TEXT, true);
-    player.prepare(renderers);
+//    this.videoRenderer = renderers[TYPE_VIDEO];
+//    this.trackNames = trackNames;
+//    this.multiTrackSources = multiTrackSources;
+//    rendererBuildingState = RENDERER_BUILDING_STATE_BUILT;
+//    maybeReportPlayerState();
+//    pushSurfaceAndVideoTrack(false);
+//    pushTrackSelection(TYPE_AUDIO, true);
+//    pushTrackSelection(TYPE_TEXT, true);
+//      pushTrackSelection(TYPE_TEXT, true);
+//    player.prepare(renderers);
+//      rendererBuildingState = RENDERER_BUILDING_STATE_BUILT;
+
+      // Complete preparation.
+      this.trackNames = trackNames;
+      this.videoRenderer = renderers[TYPE_VIDEO];
+      this.codecCounters = videoRenderer instanceof MediaCodecTrackRenderer
+              ? ((MediaCodecTrackRenderer) videoRenderer).codecCounters
+              : renderers[TYPE_AUDIO] instanceof MediaCodecTrackRenderer
+              ? ((MediaCodecTrackRenderer) renderers[TYPE_AUDIO]).codecCounters : null;
+      this.multiTrackSources = multiTrackSources;
+      this.bandwidthMeter = bandwidthMeter;
+      pushSurface(false);
+      pushTrackSelection(TYPE_VIDEO, true);
+      pushTrackSelection(TYPE_AUDIO, true);
+      pushTrackSelection(TYPE_TEXT, true);
+      player.prepare(renderers);
+      rendererBuildingState = RENDERER_BUILDING_STATE_BUILT;
   }
 
   /**
@@ -888,24 +948,24 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
 //    }
 //  }
 
-  @Override
-  public void onText(String text) {
-    if (textListener != null) {
-      textListener.onText(text);
-    }
-  }
-
-  /* package */ MetadataTrackRenderer.MetadataRenderer<Map<String, Object>>
-      getId3MetadataRenderer() {
-    return new MetadataTrackRenderer.MetadataRenderer<Map<String, Object>>() {
-      @Override
-      public void onMetadata(Map<String, Object> metadata) {
-        if (id3MetadataListener != null) {
-          id3MetadataListener.onId3Metadata(metadata);
-        }
-      }
-    };
-  }
+//  @Override
+//  public void onText(String text) {
+//    if (textListener != null) {
+//      textListener.onText(text);
+//    }
+//  }
+//
+//  /* package */ MetadataTrackRenderer.MetadataRenderer<Map<String, Object>>
+//      getId3MetadataRenderer() {
+//    return new MetadataTrackRenderer.MetadataRenderer<Map<String, Object>>() {
+//      @Override
+//      public void onMetadata(Map<String, Object> metadata) {
+//        if (id3MetadataListener != null) {
+//          id3MetadataListener.onId3Metadata(metadata);
+//        }
+//      }
+//    };
+//  }
 
   @Override
   public void onPlayWhenReadyCommitted() {
@@ -1011,9 +1071,9 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
 
     @Override
     public void onRenderers(String[][] trackNames, MultiTrackChunkSource[] multiTrackSources,
-                                 TrackRenderer[] renderers) {
+                          TrackRenderer[] renderers, BandwidthMeter bandwidthMeter) {
       if (!canceled) {
-        ExoplayerWrapper.this.onRenderers(trackNames, multiTrackSources, renderers);
+          ExoplayerWrapper.this.onRenderers(trackNames, multiTrackSources, renderers, bandwidthMeter);
       }
     }
 
@@ -1025,5 +1085,17 @@ public class ExoplayerWrapper implements ExoPlayer.Listener, ChunkSampleSource.E
     }
 
   }
+    private void pushSurface(boolean blockForSurfacePush) {
+        if (videoRenderer == null) {
+            return;
+        }
 
+        if (blockForSurfacePush) {
+            player.blockingSendMessage(
+                    videoRenderer, MediaCodecVideoTrackRenderer.MSG_SET_SURFACE, surface);
+        } else {
+            player.sendMessage(
+                    videoRenderer, MediaCodecVideoTrackRenderer.MSG_SET_SURFACE, surface);
+        }
+    }
 }

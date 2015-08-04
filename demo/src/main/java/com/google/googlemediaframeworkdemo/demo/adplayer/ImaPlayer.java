@@ -38,6 +38,7 @@ import com.google.ads.interactivemedia.v3.api.ImaSdkSettings;
 import com.google.ads.interactivemedia.v3.api.player.VideoAdPlayer;
 import com.google.ads.interactivemedia.v3.api.player.VideoProgressUpdate;
 import com.google.android.exoplayer.ExoPlayer;
+import com.google.android.exoplayer.audio.AudioCapabilities;
 import com.google.android.libraries.mediaframework.exoplayerextensions.ExoplayerWrapper;
 import com.google.android.libraries.mediaframework.exoplayerextensions.Video;
 import com.google.android.libraries.mediaframework.layeredvideo.PlaybackControlLayer;
@@ -199,8 +200,13 @@ public class ImaPlayer {
 
       }
     };
+    private AudioCapabilities audioCapabilities;
 
-  /**
+    public void setAudioCapabilities(AudioCapabilities audioCapabilities) {
+        this.audioCapabilities = audioCapabilities;
+    }
+
+    /**
    * Sets up ads manager, responds to ad errors, and handles ad state changes.
    */
   private class AdListener implements AdErrorEvent.AdErrorListener,

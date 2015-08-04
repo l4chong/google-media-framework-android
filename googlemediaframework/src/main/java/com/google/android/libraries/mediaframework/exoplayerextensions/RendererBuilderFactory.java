@@ -19,6 +19,7 @@ package com.google.android.libraries.mediaframework.exoplayerextensions;
 import android.content.Context;
 import android.net.Uri;
 
+import com.google.android.exoplayer.audio.AudioCapabilities;
 import com.google.android.exoplayer.extractor.mp3.Mp3Extractor;
 import com.google.android.exoplayer.extractor.mp4.Mp4Extractor;
 
@@ -27,6 +28,11 @@ import com.google.android.exoplayer.extractor.mp4.Mp4Extractor;
  */
 public class RendererBuilderFactory {
 
+    public static AudioCapabilities mAudioCapabilities;
+
+    public static void setAudioCapabilities(AudioCapabilities audioCapabilities){
+        mAudioCapabilities = audioCapabilities;
+    }
   /**
    * Create a renderer builder which can build the given video.
    * @param ctx The context (ex {@link android.app.Activity} in whicb the video has been created.
@@ -34,11 +40,14 @@ public class RendererBuilderFactory {
    */
   public static ExoplayerWrapper.RendererBuilder createRendererBuilder(Context ctx,
                                                                        Video video) {
+      AudioCapabilities audioCapabilities;
     switch (video.getVideoType()) {
       case HLS:
-        return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
-                                      video.getUrl(),
-                                      video.getContentId());
+//        return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
+//                                      video.getUrl(),
+//                                      video.getContentId());
+
+        return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx), video.getUrl(), mAudioCapabilities);
 //      case DASH:
 //        return new DashRendererBuilder(ctx,
 //                                       ExoplayerUtil.getUserAgent(ctx),

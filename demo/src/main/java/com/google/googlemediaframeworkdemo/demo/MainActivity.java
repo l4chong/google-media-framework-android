@@ -28,6 +28,9 @@ import android.widget.FrameLayout;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import com.google.android.exoplayer.audio.AudioCapabilities;
+import com.google.android.exoplayer.audio.AudioCapabilitiesReceiver;
+import com.google.android.libraries.mediaframework.exoplayerextensions.RendererBuilderFactory;
 import com.google.android.libraries.mediaframework.exoplayerextensions.Video;
 import com.google.android.libraries.mediaframework.layeredvideo.PlaybackControlLayer;
 import com.google.googlemediaframeworkdemo.demo.adplayer.ImaPlayer;
@@ -35,7 +38,7 @@ import com.google.googlemediaframeworkdemo.demo.adplayer.ImaPlayer;
 /**
  * Displays a list of videos and plays them when they are selected.
  */
-public class MainActivity extends Activity implements PlaybackControlLayer.FullscreenCallback {
+public class MainActivity extends Activity implements PlaybackControlLayer.FullscreenCallback, AudioCapabilitiesReceiver.Listener {
 
   /**
    * The player which will be used to play the content videos and the ads.
@@ -51,6 +54,10 @@ public class MainActivity extends Activity implements PlaybackControlLayer.Fulls
    * The list of the videos.
    */
   private ListView videoListView;
+
+
+    private AudioCapabilitiesReceiver audioCapabilitiesReceiver;
+    private AudioCapabilities audioCapabilities;
 
   /**
    * Set up the view and populate the list of the videos.
@@ -68,6 +75,7 @@ public class MainActivity extends Activity implements PlaybackControlLayer.Fulls
       actionBar.hide();
     }
 
+      audioCapabilitiesReceiver = new AudioCapabilitiesReceiver(getApplicationContext(), this);
     // This container will be the video player.
     videoPlayerContainer = (FrameLayout) view.findViewById(R.id.video_frame);
 
@@ -290,7 +298,16 @@ public class MainActivity extends Activity implements PlaybackControlLayer.Fulls
     videoListView.setVisibility(View.VISIBLE);
   }
 
-  /**
+    @Override
+    public void onAudioCapabilitiesChanged(AudioCapabilities audioCapabilities) {
+        boolean audioCapabilitiesChanged = !audioCapabilities.equals(this.audioCapabilities);
+        if (imaPlayer == null || audioCapabilitiesChanged) {
+//            imaPlayer.setAudioCapabilities(audioCapabilities);
+            RendererBuilderFactory.setAudioCapabilities(audioCapabilities);
+        }
+    }
+
+    /**
    * Simple class to bundle together the title, content video, and ad tag associated with a video.
    */
   public static class VideoListItem {
@@ -324,5 +341,16 @@ public class MainActivity extends Activity implements PlaybackControlLayer.Fulls
     }
   }
 
+    @Override
+    protected void onPause() {
+        super.onPause();
+        audioCapabilitiesReceiver.unregister();
+    }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        audioCapabilitiesReceiver.register();
+    }
 }
