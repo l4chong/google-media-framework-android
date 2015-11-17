@@ -55,6 +55,9 @@ import java.util.List;
  */
 public class ImaPlayer {
 
+  private static String PLAYER_TYPE = "google/gmf-android";
+  private static String PLAYER_VERSION = "0.2.0";
+
   /**
    * The activity that is displaying this video player.
    */
@@ -92,6 +95,8 @@ public class ImaPlayer {
    */
   private AdsManager adsManager;
 
+  private AdListener adListener;
+
   /**
    * These callbacks are notified when the video is played and when it ends. The IMA SDK uses this
    * to poll for video progress and when to stop the ad.
@@ -128,6 +133,11 @@ public class ImaPlayer {
   private ViewGroup.LayoutParams originalContainerLayoutParams;
 
   /**
+   * A flag to indicate whether the ads has been shown.
+   */
+  private boolean adsShown;
+
+  /**
    * Notifies callbacks when the ad finishes.
    */
   private final ExoplayerWrapper.PlaybackListener adPlaybackListener
@@ -157,7 +167,7 @@ public class ImaPlayer {
     }
 
     @Override
-    public void onVideoSizeChanged(int width, int height, float pixelWidthHeightRatio) {
+    public void onVideoSizeChanged(int width, int height, int unappliedRotationDegrees, float pixelWidthHeightRatio) {
       // No need to respond to size changes here.
     }
   };
@@ -193,9 +203,10 @@ public class ImaPlayer {
        * We don't respond to size changes.
        * @param width The new width of the player.
        * @param height The new height of the player.
+       * @param unappliedRotationDegrees The new rotation angle of the player thats not applied.
        */
       @Override
-      public void onVideoSizeChanged(int width, int height, float pixelWidthHeightRatio) {
+      public void onVideoSizeChanged(int width, int height, int unappliedRotationDegrees, float pixelWidthHeightRatio) {
 
       }
     };
@@ -297,7 +308,7 @@ public class ImaPlayer {
      * then the start method will be ignored.
      */
     @Override
-    public VideoProgressUpdate getProgress() {
+    public VideoProgressUpdate getAdProgress() {
       VideoProgressUpdate vpu;
 
       if (adPlayer == null && contentPlayer == null) {
@@ -355,8 +366,10 @@ public class ImaPlayer {
       this.adTagUrl = Uri.parse(adTagUrl);
     }
 
+    sdkSettings.setPlayerType(PLAYER_TYPE);
+    sdkSettings.setPlayerVersion(PLAYER_VERSION);
     adsLoader = ImaSdkFactory.getInstance().createAdsLoader(activity, sdkSettings);
-    AdListener adListener = new AdListener();
+    adListener = new AdListener();
     adsLoader.addAdErrorListener(adListener);
     adsLoader.addAdsLoadedListener(adListener);
 
@@ -370,6 +383,12 @@ public class ImaPlayer {
         autoplay);
 
     contentPlayer.addPlaybackListener(contentPlaybackListener);
+    contentPlayer.setPlayCallback(new PlaybackControlLayer.PlayCallback() {
+      @Override
+      public void onPlay() {
+        handlePlay();
+      }
+    });
 
     // Move the content player's surface layer to the background so that the ad player's surface
     // layer can be overlaid on top of it during ad playback.
@@ -562,9 +581,15 @@ public class ImaPlayer {
   public void release() {
     if (adPlayer != null) {
       adPlayer.release();
+      adPlayer = null;
+    }
+    if (adsManager != null) {
+      adsManager.destroy();
+      adsManager = null;
     }
     adsLoader.contentComplete();
     contentPlayer.release();
+    adsLoader.removeAdsLoadedListener(adListener);
   }
 
   /**
@@ -615,7 +640,7 @@ public class ImaPlayer {
   }
 
   /**
-   * Destroy the {@link SimpleVideoPlayer} responsible for playing the ad and rmeove it.
+   * Destroy the {@link SimpleVideoPlayer} responsible for playing the ad and remove it.
    */
   private void destroyAdPlayer(){
     if(adPlayerContainer != null){
@@ -694,4 +719,14 @@ public class ImaPlayer {
     adsLoader.requestAds(buildAdsRequest(adTagUrl.toString()));
   }
 
+  /**
+   * handle play callback, to request IMA ads
+   */
+  private void handlePlay() {
+    if (!adsShown && adTagUrl != null) {
+      contentPlayer.pause();
+      requestAd();
+      adsShown = true;
+    }
+  }
 }
