@@ -35,10 +35,10 @@ public class RendererBuilderFactory {
       case HLS:
         return new HlsRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
                                       video.getUrl());
-      case DASH:
-        return new DashRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
-                                       video.getUrl(),
-                                       new WidevineTestMediaDrmCallback(video.getContentId()));
+//      case DASH:
+//        return new DashRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx),
+//                                       video.getUrl(),
+//                                       new WidevineTestMediaDrmCallback(video.getContentId()));
       case MP4:
         return new ExtractorRendererBuilder(ctx, ExoplayerUtil.getUserAgent(ctx), Uri.parse(video.getUrl()));
       case OTHER:
