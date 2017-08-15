@@ -28,6 +28,7 @@ public class Video {
     DASH,
     MP4,
     HLS,
+    MP3,
     OTHER
   }
 
